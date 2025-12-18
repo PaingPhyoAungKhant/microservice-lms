@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: asto-lms-config
+  namespace: asto-lms
+data: 
+  # Environment
+  ENV: "development"
+
+  # Database Configuration
+  DB_MAX_OPEN_CONNS: "25"
+  DB_MAX_IDLE_CONNS: "5"
+  DB_CONN_MAX_LIFETIME: "5m"
+  DB_SSL_MODE: "disable"
+
+  # Database Host
+  USER_DB_HOST: "user-db-service"
+
+  # Database Port
+  USER_DB_PORT: "5432"
+
+  # Database Name
+  USER_DB_NAME: "user_db"
+
+  # RabbitMQ
+  RABBITMQ_HOST: "rabbitmq.asto-lms.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_EXCHANGE: "lms.events"
+  RABBITMQ_EXCHANGE_TYPE: "topic"
+
+  # Redis 
+  REDIS_HOST: "asto-redis.asto-lms.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # Service HOST
+  USER_SERVICE_HOST: "user-service"
+
+  # Service PORT
+  USER_SERVICE_PORT: "8001"
+
+  # Service Name
+  USER_SERVICE_NAME: "user-service"
+
+  # Service URL
+  USER_SERVICE_URL: "http://${USER_SERVICE_HOST}:${USER_SERVICE_PORT}"
+
+  # Auth Service
+  AUTH_SERVICE_PORT: "8002"
+  AUTH_SERVICE_NAME: "auth-service"
+
+  # Notification Service
+  NOTIFICATION_SERVICE_PORT: "8003"
+  NOTIFICATION_SERVICE_NAME: "notification-service"
+
+  # File Service
+  FILE_SERVICE_PORT: "8004"
+  FILE_SERVICE_NAME: "file-service"
+  FILE_DB_HOST: "file-db-service"
+  FILE_DB_PORT: "5432"
+  FILE_DB_NAME: "file_db"
+
+  # Course Service
+  COURSE_SERVICE_PORT: "8005"
+  COURSE_SERVICE_NAME: "course-service"
+  COURSE_SERVICE_HOST: "course-service"
+  COURSE_SERVICE_URL: "http://${COURSE_SERVICE_HOST}:${COURSE_SERVICE_PORT}"
+  COURSE_DB_HOST: "course-db-service"
+  COURSE_DB_PORT: "5432"
+  COURSE_DB_NAME: "course_db"
+
+  # Zoom Service
+  ZOOM_SERVICE_PORT: "8006"
+  ZOOM_SERVICE_NAME: "zoom-service"
+  ZOOM_SERVICE_HOST: "zoom-service"
+  ZOOM_SERVICE_URL: "http://${ZOOM_SERVICE_HOST}:${ZOOM_SERVICE_PORT}"
+  ZOOM_DB_HOST: "zoom-db-service"
+  ZOOM_DB_PORT: "5432"
+  ZOOM_DB_NAME: "zoom_db"
+  ZOOM_BASE_URL: "https://api.zoom.us/v2"
+
+  # Enrollment Service
+  ENROLLMENT_SERVICE_PORT: "8007"
+  ENROLLMENT_SERVICE_NAME: "enrollment-service"
+  ENROLLMENT_SERVICE_HOST: "enrollment-service"
+  ENROLLMENT_SERVICE_URL: "http://${ENROLLMENT_SERVICE_HOST}:${ENROLLMENT_SERVICE_PORT}"
+  ENROLLMENT_DB_HOST: "enrollment-db-service"
+  ENROLLMENT_DB_PORT: "5432"
+  ENROLLMENT_DB_NAME: "enrollment_db"
+
+  # MinIO Configuration
+  MINIO_ENDPOINT: "minio.asto-lms.svc.cluster.local:80"
+  MINIO_REGION: "us-east-1"
+  MINIO_USE_SSL: "false"
+
+  # JWT Configuration
+  JWT_ACCESS_TOKEN_DURATION: "24h"
+  JWT_REFRESH_TOKEN_DURATION: "7d"
+
+  # SMTP Configuration
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_FROM_EMAIL: "noreply@asto-lms.local"
+  SMTP_FROM_NAME: "ASTO LMS"
+
+  # Base URL
+  BASE_URL: "http://localhost:3000"
+
+  # API Gateway URL
+  API_GATEWAY_URL: "http://asto-lms.local"
+
+  # LOG Level 
+  LOG_LEVEL: "info"

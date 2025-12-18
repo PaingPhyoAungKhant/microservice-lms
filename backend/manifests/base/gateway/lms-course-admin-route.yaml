@@ -1,0 +1,63 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lms-course-admin-route
+  namespace: asto-lms
+  labels:
+    app.kubernetes.io/component: course-admin
+spec:
+  parentRefs:
+  - name: asto-lms-gateway
+  hostnames:
+  - asto-lms.local
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /api/v1/categories
+      method: POST
+    - path:
+        type: Exact
+        value: /api/v1/courses
+      method: POST
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-admin-policy
+    backendRefs:
+    - name: course-service
+      port: 8005
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/v1/categories/
+      method: PUT
+    - path:
+        type: PathPrefix
+        value: /api/v1/categories/
+      method: DELETE
+    - path:
+        type: PathPrefix
+        value: /api/v1/courses/
+      method: PUT
+    - path:
+        type: PathPrefix
+        value: /api/v1/courses/
+      method: DELETE
+    - path:
+        type: PathPrefix
+        value: /api/v1/courses/
+      method: POST
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-admin-policy
+    backendRefs:
+    - name: course-service
+      port: 8005
+
+

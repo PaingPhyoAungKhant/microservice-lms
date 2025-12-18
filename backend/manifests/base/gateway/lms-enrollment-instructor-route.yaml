@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lms-enrollment-instructor-route
+  namespace: asto-lms
+  labels:
+    app.kubernetes.io/component: enrollment-instructor
+spec:
+  parentRefs:
+  - name: asto-lms-gateway
+    sectionName: http
+  hostnames:
+  - asto-lms.local
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/v1/enrollments/
+      method: PUT
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-instructor-policy
+    backendRefs:
+    - name: enrollment-service
+      port: 8007
+

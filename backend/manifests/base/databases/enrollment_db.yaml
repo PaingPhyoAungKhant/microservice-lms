@@ -1,0 +1,73 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enrollment-db
+  namespace: asto-lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enrollment-db
+  template:
+    metadata:
+      labels:
+        app: enrollment-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "enrollment_db"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: enrollment-db-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enrollment-db-service
+  namespace: asto-lms
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: enrollment-db
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: enrollment-db-pvc
+  namespace: asto-lms
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+

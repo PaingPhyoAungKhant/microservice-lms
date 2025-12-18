@@ -1,0 +1,59 @@
+apiVersion: batch/v1 
+kind: Job
+metadata: 
+  name: user-service-migrate
+  namespace: asto-lms
+spec: 
+  backoffLimit: 2
+  template: 
+    spec: 
+      restartPolicy: OnFailure
+      containers: 
+      - name: user-service-migrate
+        image: asto-lms/user-service-migrate:latest
+        imagePullPolicy: Never
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            DB_HOST="user-db-service.asto-lms.svc.cluster.local"
+            DB_PORT="${USER_DB_PORT}"
+            echo "Waiting for database connection..."
+            for i in $(seq 1 30); do
+              if nc -z -w 2 "${DB_HOST}" "${DB_PORT}" 2>/dev/null; then
+                echo "Database connection successful!"
+                break
+              fi
+              echo "Attempt $i/30: Database not reachable, waiting 2 seconds..."
+              sleep 2
+            done
+            echo "Running migrations..."
+            migrate -path /migrations -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${USER_DB_NAME}?sslmode=${DB_SSL_MODE}" up
+            echo "Migrations completed successfully!"
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: USER_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: USER_DB_PORT
+        - name: USER_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: USER_DB_NAME
+        - name: DB_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_SSL_MODE

@@ -1,0 +1,1 @@
+ALTER TABLE course_offering ADD COLUMN enrollment_cost DECIMAL(10,2) NOT NULL DEFAULT 0.00;

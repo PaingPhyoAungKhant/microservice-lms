@@ -1,0 +1,47 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lms-enrollment-student-route
+  namespace: asto-lms
+  labels:
+    app.kubernetes.io/component: enrollment-student
+spec:
+  parentRefs:
+  - name: asto-lms-gateway
+    sectionName: http
+  hostnames:
+  - asto-lms.local
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /api/v1/enrollments
+      method: GET
+    - path:
+        type: Exact
+        value: /api/v1/enrollments
+      method: POST
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-student-policy
+    backendRefs:
+    - name: enrollment-service
+      port: 8007
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/v1/enrollments/
+      method: GET
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-student-policy
+    backendRefs:
+    - name: enrollment-service
+      port: 8007
+

@@ -1,0 +1,48 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: lms-zoom-instructor-route
+  namespace: asto-lms
+  labels:
+    app.kubernetes.io/component: zoom-instructor
+spec:
+  parentRefs:
+  - name: asto-lms-gateway
+  hostnames:
+  - asto-lms.local
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/meetings
+      method: POST
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/meetings
+      method: PUT
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/meetings
+      method: DELETE
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/recordings
+      method: POST
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/recordings
+      method: PUT
+    - path:
+        type: PathPrefix
+        value: /api/v1/zoom/recordings
+      method: DELETE
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.nginx.org
+        kind: SnippetsFilter
+        name: lms-instructor-policy
+    backendRefs:
+    - name: zoom-service
+      port: 8006
+

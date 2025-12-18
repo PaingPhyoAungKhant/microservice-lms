@@ -1,0 +1,177 @@
+# Zoom Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zoom-service
+  namespace: asto-lms
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: zoom-service
+  template: 
+    metadata:
+      labels: 
+        app: zoom-service
+    spec: 
+      containers:
+      - name: zoom-service
+        image: asto-lms/zoom-service:latest
+        imagePullPolicy: IfNotPresent
+        ports: 
+        - name: http
+          containerPort: 8006
+        env: 
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ZOOM_SERVICE_PORT
+        - name: ENV
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ENV
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ZOOM_SERVICE_NAME
+        - name: DB_HOST 
+          valueFrom:
+            configMapKeyRef: 
+              name: asto-lms-config
+              key: ZOOM_DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ZOOM_DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ZOOM_DB_NAME
+        - name: DB_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_SSL_MODE
+        - name: DB_MAX_OPEN_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_OPEN_CONNS
+        - name: DB_MAX_IDLE_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_IDLE_CONNS
+        - name: DB_CONN_MAX_LIFETIME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_CONN_MAX_LIFETIME
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: username
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: password
+        - name: RABBITMQ_URL
+          value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASS)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)/"
+        - name: RABBITMQ_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE
+        - name: RABBITMQ_EXCHANGE_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE_TYPE
+        - name: ZOOM_USER_ID
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: ZOOM_USER_ID
+        - name: ZOOM_ACCOUNT_ID
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: ZOOM_ACCOUNT_ID
+        - name: ZOOM_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: ZOOM_CLIENT_ID
+        - name: ZOOM_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: ZOOM_CLIENT_SECRET
+        - name: ZOOM_SECRET_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: ZOOM_SECRET_TOKEN
+        - name: ZOOM_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ZOOM_BASE_URL
+        resources:
+          requests: 
+            cpu: "50m"
+            memory: "64Mi"
+          limits: 
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+
+# Zoom Service Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zoom-service
+  namespace: asto-lms
+spec:
+  selector:
+    app: zoom-service
+  ports:
+    - name: http
+      port: 8006
+      targetPort: http
+

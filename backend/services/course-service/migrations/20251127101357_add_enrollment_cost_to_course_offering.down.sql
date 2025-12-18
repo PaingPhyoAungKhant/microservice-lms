@@ -1,0 +1,1 @@
+ALTER TABLE course_offering DROP COLUMN enrollment_cost;

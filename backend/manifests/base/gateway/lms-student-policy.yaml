@@ -1,0 +1,55 @@
+apiVersion: gateway.nginx.org/v1alpha1
+kind: SnippetsFilter
+metadata:
+  name: lms-student-policy
+  namespace: asto-lms
+spec:
+  snippets:
+  - context: http.server
+    value: |
+      location = /__asto_lms_student_auth {
+          internal;
+          proxy_method GET;
+          proxy_pass http://auth-service.asto-lms.svc.cluster.local:8002/api/v1/auth/verify;
+          proxy_set_header Authorization $http_authorization;
+          proxy_set_header X-Original-URI $request_uri;
+          proxy_set_header X-Original-Method $request_method;
+          proxy_set_header X-Request-ID $request_id;
+          proxy_set_header X-Required-Role "student,instructor,admin";
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+          proxy_set_header Content-Type "";
+      }
+  - context: http.server.location
+    value: |
+      auth_request /__asto_lms_student_auth;
+      auth_request_set $auth_status $upstream_status;
+      auth_request_set $auth_user_id $upstream_http_x_user_id;
+      auth_request_set $auth_user_email $upstream_http_x_user_email;
+      auth_request_set $auth_user_role $upstream_http_x_user_role;
+      
+      if ($auth_status = 401) {
+          return 401;
+      }
+      if ($auth_status = 403) {
+          return 403;
+      }
+      if ($auth_status = 0) {
+          return 502;
+      }
+      
+      proxy_set_header X-User-ID $auth_user_id;
+      proxy_set_header X-User-Email $auth_user_email;
+      proxy_set_header X-User-Role $auth_user_role;
+      
+      add_header 'Access-Control-Allow-Origin' '*' always;
+      add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH' always;
+      add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,Cache-Control,Keep-Alive,X-Requested-With,If-Modified-Since' always;
+      add_header 'Access-Control-Allow-Credentials' 'true' always;
+      add_header 'X-Frame-Options' 'SAMEORIGIN' always;
+      add_header 'X-Content-Type-Options' 'nosniff' always;
+      add_header 'X-XSS-Protection' '1; mode=block' always;
+      add_header 'X-Request-ID' $request_id always;
+      add_header 'X-Response-Time' $request_time always;
+      add_header 'X-Upstream-Addr' $upstream_addr always;
+

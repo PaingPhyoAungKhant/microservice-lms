@@ -1,0 +1,106 @@
+apiVersion: batch/v1 
+kind: Job
+metadata: 
+  name: course-service-migrate
+  namespace: asto-lms
+spec: 
+  backoffLimit: 2
+  template: 
+    spec: 
+      restartPolicy: OnFailure
+      containers: 
+      - name: course-service-migrate
+        image: asto-lms/course-service-migrate:latest
+        imagePullPolicy: Never
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            DB_HOST="course-db-service.asto-lms.svc.cluster.local"
+            DB_PORT="${COURSE_DB_PORT}"
+            DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${COURSE_DB_NAME}?sslmode=${DB_SSL_MODE}"
+            
+            echo "Waiting for database connection..."
+            for i in $(seq 1 30); do
+              if nc -z -w 2 "${DB_HOST}" "${DB_PORT}" 2>/dev/null; then
+                echo "Database connection successful!"
+                break
+              fi
+              echo "Attempt $i/30: Database not reachable, waiting 2 seconds..."
+              sleep 2
+            done
+            
+            echo "Checking for dirty migration state..."
+            DIRTY_VERSION=$(PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -tAc "SELECT version FROM schema_migrations WHERE dirty = true LIMIT 1;" 2>/dev/null || echo "")
+            
+            if [ -n "${DIRTY_VERSION}" ]; then
+              echo "Warning: Database is in dirty state at version ${DIRTY_VERSION}"
+              echo "Checking if migration was actually applied..."
+              
+              # For known migrations, verify they were applied
+              case "${DIRTY_VERSION}" in
+                20251125213217)
+                  # Check if columns exist for this migration
+                  COLUMNS_EXIST=$(PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -tAc "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'course_offering_instructor' AND column_name IN ('created_at', 'updated_at');" 2>/dev/null || echo "0")
+                  if [ "${COLUMNS_EXIST}" = "2" ]; then
+                    echo "Migration ${DIRTY_VERSION} was actually applied. Fixing dirty state..."
+                    PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -c "UPDATE schema_migrations SET dirty = false WHERE version = ${DIRTY_VERSION};" 2>/dev/null
+                    echo "Dirty state fixed!"
+                  else
+                    echo "Error: Migration ${DIRTY_VERSION} failed. Rolling back dirty state..."
+                    migrate -path /migrations -database "${DB_URL}" force "${DIRTY_VERSION}"
+                    echo "Forced version ${DIRTY_VERSION}. Manual intervention may be needed."
+                  fi
+                  ;;
+                *)
+                  echo "Unknown dirty version ${DIRTY_VERSION}. Attempting to fix..."
+                  PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -c "UPDATE schema_migrations SET dirty = false WHERE version = ${DIRTY_VERSION};" 2>/dev/null || {
+                    echo "Could not auto-fix. Using migrate force..."
+                    migrate -path /migrations -database "${DB_URL}" force "${DIRTY_VERSION}" || true
+                  }
+                  ;;
+              esac
+            fi
+            
+            echo "Running migrations..."
+            if ! migrate -path /migrations -database "${DB_URL}" up; then
+              echo "Migration failed. Checking for dirty state..."
+              DIRTY_VERSION=$(PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -tAc "SELECT version FROM schema_migrations WHERE dirty = true LIMIT 1;" 2>/dev/null || echo "")
+              if [ -n "${DIRTY_VERSION}" ]; then
+                echo "Database is dirty at version ${DIRTY_VERSION}"
+                echo "Attempting to fix by setting dirty = false..."
+                PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${POSTGRES_USER}" -d "${COURSE_DB_NAME}" -c "UPDATE schema_migrations SET dirty = false WHERE version = ${DIRTY_VERSION};" 2>/dev/null || true
+                echo "Retrying migration..."
+                migrate -path /migrations -database "${DB_URL}" up
+              else
+                exit 1
+              fi
+            fi
+            echo "Migrations completed successfully!"
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: COURSE_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: COURSE_DB_PORT
+        - name: COURSE_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: COURSE_DB_NAME
+        - name: DB_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_SSL_MODE

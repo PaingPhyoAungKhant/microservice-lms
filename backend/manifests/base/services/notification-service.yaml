@@ -1,0 +1,146 @@
+# Notification Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: asto-lms
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: notification-service
+  template: 
+    metadata:
+      labels: 
+        app: notification-service
+    spec: 
+      containers:
+      - name: notification-service
+        image: asto-lms/notification-service:latest
+        imagePullPolicy: IfNotPresent
+        ports: 
+        - name: http
+          containerPort: 8003
+        env: 
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: NOTIFICATION_SERVICE_PORT
+        - name: ENV
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ENV
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: NOTIFICATION_SERVICE_NAME
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: username
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: password
+        - name: RABBITMQ_URL
+          value:  "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASS)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)/"
+        - name: RABBITMQ_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE
+        - name: RABBITMQ_EXCHANGE_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE_TYPE
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: REDIS_PASSWORD
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_DB
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)/$(REDIS_DB)"
+        - name: SMTP_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: SMTP_HOST
+        - name: SMTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: SMTP_PORT
+        - name: SMTP_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: SMTP_USERNAME
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: SMTP_PASSWORD
+        - name: SMTP_FROM_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: SMTP_FROM_EMAIL
+        - name: SMTP_FROM_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: SMTP_FROM_NAME
+        resources:
+          requests: 
+            cpu: "50m"
+            memory: "64Mi"
+          limits: 
+            cpu: "100m"
+            memory: "128Mi"
+
+# Notification Service Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: asto-lms
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 8003
+      targetPort: http
+

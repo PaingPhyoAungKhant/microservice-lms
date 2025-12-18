@@ -1,0 +1,145 @@
+# File Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-service
+  namespace: asto-lms
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: file-service
+  template: 
+    metadata:
+      labels: 
+        app: file-service
+    spec: 
+      containers:
+      - name: file-service
+        image: asto-lms/file-service:latest
+        imagePullPolicy: IfNotPresent
+        ports: 
+        - name: http
+          containerPort: 8004
+        env: 
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: FILE_SERVICE_PORT
+        - name: ENV
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ENV
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: FILE_SERVICE_NAME
+        - name: DB_HOST 
+          valueFrom:
+            configMapKeyRef: 
+              name: asto-lms-config
+              key: FILE_DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: FILE_DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: FILE_DB_NAME
+        - name: DB_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_SSL_MODE
+        - name: DB_MAX_OPEN_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_OPEN_CONNS
+        - name: DB_MAX_IDLE_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_IDLE_CONNS
+        - name: DB_CONN_MAX_LIFETIME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_CONN_MAX_LIFETIME
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: MINIO_ENDPOINT
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: MINIO_ACCESS_KEY
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: MINIO_SECRET_KEY
+        - name: MINIO_USE_SSL
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: MINIO_USE_SSL
+        - name: MINIO_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: MINIO_REGION
+        - name: API_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: API_GATEWAY_URL
+        resources:
+          requests: 
+            cpu: "50m"
+            memory: "64Mi"
+          limits: 
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+
+# File Service Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-service
+  namespace: asto-lms
+spec:
+  selector:
+    app: file-service
+  ports:
+    - name: http
+      port: 8004
+      targetPort: http
+

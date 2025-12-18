@@ -1,0 +1,184 @@
+# Auth Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: asto-lms
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: auth-service
+  template: 
+    metadata:
+      labels: 
+        app: auth-service
+    spec: 
+      containers:
+      - name: auth-service
+        image: asto-lms/auth-service:latest
+        imagePullPolicy: IfNotPresent
+        ports: 
+        - name: http
+          containerPort: 8002
+        env: 
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: AUTH_SERVICE_PORT
+        - name: ENV
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: ENV
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: AUTH_SERVICE_NAME
+        - name: DB_HOST 
+          valueFrom:
+            configMapKeyRef: 
+              name: asto-lms-config
+              key: USER_DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: USER_DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: USER_DB_NAME
+        - name: DB_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_SSL_MODE
+        - name: DB_MAX_OPEN_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_OPEN_CONNS
+        - name: DB_MAX_IDLE_CONNS
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_MAX_IDLE_CONNS
+        - name: DB_CONN_MAX_LIFETIME
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: DB_CONN_MAX_LIFETIME
+        - name: RABBITMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_HOST
+        - name: RABBITMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_PORT
+        - name: RABBITMQ_USER
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: username
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-default-user
+              key: password
+        - name: RABBITMQ_URL
+          value:  "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASS)@$(RABBITMQ_HOST):$(RABBITMQ_PORT)/"
+        - name: RABBITMQ_EXCHANGE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE
+        - name: RABBITMQ_EXCHANGE_TYPE
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: RABBITMQ_EXCHANGE_TYPE
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: REDIS_PASSWORD
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: REDIS_DB
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)/$(REDIS_DB)"
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: asto-lms-secrets
+              key: JWT_SECRET
+        - name: JWT_ACCESS_TOKEN_DURATION
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: JWT_ACCESS_TOKEN_DURATION
+        - name: JWT_REFRESH_TOKEN_DURATION
+          valueFrom:
+            configMapKeyRef:
+              name: asto-lms-config
+              key: JWT_REFRESH_TOKEN_DURATION
+        resources:
+          requests: 
+            cpu: "50m"
+            memory: "64Mi"
+          limits: 
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+
+# Auth Service Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: asto-lms
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http
+

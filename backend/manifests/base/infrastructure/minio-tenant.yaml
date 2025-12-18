@@ -1,0 +1,32 @@
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: asto-minio
+  namespace: asto-lms
+spec:
+  image: minio/minio:latest
+  configuration:
+    name: asto-lms-secrets
+  pools:
+    - name: pool-0
+      servers: 1
+      volumesPerServer: 1
+      volumeClaimTemplate:
+        metadata: {}
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+  requestAutoCert: false
+  certConfig:
+    commonName: ""
+    organizationName: []
+    dnsNames: []
+  podManagementPolicy: Parallel
+  imagePullPolicy: IfNotPresent
+  exposeServices:
+    minio: true
+    console: false
+

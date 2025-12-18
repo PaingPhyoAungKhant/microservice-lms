@@ -1,0 +1,73 @@
+
+---
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: Redis
+metadata:
+  name: asto-redis
+  namespace: asto-lms
+spec:
+  # redisConfig:
+  #   additionalRedisConfig: redis-external-config
+  podSecurityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+  env: 
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: asto-lms-secrets
+        key: REDIS_PASSWORD
+  kubernetesConfig:
+    image: quay.io/opstree/redis:latest
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    redisSecret:
+           name: asto-lms-secrets
+           key: REDIS_PASSWORD
+        # imagePullSecrets:
+        #   - name: regcred
+  redisExporter:
+    enabled: false
+    image: quay.io/opstree/redis-exporter:latest
+    imagePullPolicy: Always
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        cpu: 25m
+        memory: 32Mi
+        # Environment Variables for Redis Exporter
+        # env:
+        # - name: REDIS_EXPORTER_INCL_SYSTEM_METRICS
+        #   value: "true"
+        # - name: UI_PROPERTIES_FILE_NAME
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: game-demo
+        #       key: ui_properties_file_name
+        # - name: SECRET_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: mysecret
+        #       key: username
+  storage:
+    volumeClaimTemplate:
+      spec:
+        # storageClassName: standard
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 256Mi
+            # nodeSelector:
+            #   kubernetes.io/hostname: minikube
+            # podSecurityContext: {}
+            # priorityClassName:
+            # affinity:
+            # Tolerations: []

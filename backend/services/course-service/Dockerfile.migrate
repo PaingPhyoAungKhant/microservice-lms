@@ -1,0 +1,17 @@
+FROM alpine:latest
+
+ARG MIGRATE_VERSION=v4.17.0
+ARG MIGRATE_OS=linux
+ARG MIGRATE_ARCH=amd64
+
+RUN apk add --no-cache ca-certificates curl tar netcat-openbsd postgresql-client \
+    && curl -L https://github.com/golang-migrate/migrate/releases/download/${MIGRATE_VERSION}/migrate.${MIGRATE_OS}-${MIGRATE_ARCH}.tar.gz \
+    | tar xz -C /tmp \
+    && find /tmp -type f -name "migrate*" -executable -exec mv {} /usr/local/bin/migrate \; \
+    && chmod +x /usr/local/bin/migrate \
+    && rm -rf /tmp/* 
+
+WORKDIR /app 
+
+COPY services/course-service/migrations/ /migrations/
+ENTRYPOINT ["/usr/local/bin/migrate"]
